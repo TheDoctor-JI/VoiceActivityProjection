@@ -56,7 +56,7 @@ class VAPWrapper:
         self.model = self.model.to(self.device)
         self.model = self.model.eval()
         self.debug_time = self.audio_config['vap_model']['debug_time']
-        self.plot = self.global_config['debug']['plot_vap']
+        self.plot = self.audio_config['vap_model']['plot_vap']
 
         '''
         Audio input configs
@@ -86,6 +86,7 @@ class VAPWrapper:
         '''
         Miscellaneous
         '''
+        self.report_handle = report_handle
         if(self.plot):
             #Prepare a socket to local host 8080, to which we will send data
             self.plot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -159,14 +160,14 @@ class VAPWrapper:
                 else:
                     self.logger.debug(f'VAP model returned. P_now: {next_speaker_prob_now} P_future: {next_speaker_prob_future}')
 
-                # self.report_handle((vad_prob_now,next_speaker_prob_now,next_speaker_prob_future))
+                self.report_handle((vad_prob_now,next_speaker_prob_now,next_speaker_prob_future))
 
                 if(self.plot):
                     #Send the float value to the socket
                     self.plot_socket.sendall(f'{vad_prob_now:.3f},{next_speaker_prob_now:.3f},{next_speaker_prob_future:.3f};'.encode('utf-8'))
 
-    def set_plot_handle(self, plot_handle):
-        self.visualize_content_update_handle = plot_handle
+    def set_report_handle(self, report_handle):
+        self.report_handle = report_handle
 
     def start(self):
         self.logger.info("Starting VAP model thread")
