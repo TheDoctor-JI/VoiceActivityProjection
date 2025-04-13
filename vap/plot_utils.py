@@ -307,6 +307,7 @@ def plot_waveform(
     label: Optional[str] = None,
     downsample: int = 10,
     sample_rate: int = 16000,
+    start_time = 0,
 ) -> mpl.axes.Axes:
     assert (
         waveform.ndim == 1
@@ -314,7 +315,7 @@ def plot_waveform(
     x = waveform[..., ::downsample]
 
     new_rate = sample_rate / downsample
-    x_time = torch.arange(x.shape[-1]) / new_rate
+    x_time = torch.arange(x.shape[-1]) / new_rate + start_time
 
     ax.plot(x_time, x, color=color, zorder=0, alpha=alpha, label=label)  # , alpha=0.2)
     ax.set_xlim([0, x_time[-1]])
@@ -323,7 +324,10 @@ def plot_waveform(
     ax.set_ylim([-1, 1])
     ax.set_yticks([])
     ax.set_ylabel("waveform", fontsize=14)
-    return ax
+
+    end_time = x_time[-1]
+
+    return ax, end_time
 
 
 def plot_f0(

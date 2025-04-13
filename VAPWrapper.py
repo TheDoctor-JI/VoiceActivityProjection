@@ -13,13 +13,14 @@ from vap.utils import (
     tensor_dict_to_json,
     write_json,
 )
-from vap.plot_utils import plot_stereo
-
 
 from logger.logger import setup_logger
 import os, sys
 import threading
 from utils.audio_helpers import s16le_audio_bytes_to_tensor, tf_resample_audio
+import collections
+import socket
+
 
 # everything_deterministic()
 # torch.manual_seed(0)
@@ -27,7 +28,7 @@ from utils.audio_helpers import s16le_audio_bytes_to_tensor, tf_resample_audio
 
 class VAPWrapper:
 
-    def __init__(self, global_config, audio_config, parent_logger):
+    def __init__(self, global_config, audio_config, parent_logger, report_handle):
         self.global_config = global_config
         self.audio_config = audio_config
         self.parent_logger = parent_logger
@@ -56,6 +57,7 @@ class VAPWrapper:
         self.model = self.model.to(self.device)
         self.model = self.model.eval()
         self.debug_time = self.audio_config['vap_model']['debug_time']
+        self.plot = self.global_config['debug']['plot_vap']
 
         '''
         Audio input configs
@@ -82,6 +84,14 @@ class VAPWrapper:
         self.robot_triggering_step_buffer_byte_cnt = int(self.step_size * self.audio_config['hw_params']['speaker']['sampling_rate'] * 2)
         self.robot_speaker_B_step_buffer = b''
 
+        '''
+        Miscellaneous
+        '''
+        if(self.plot):
+            #Prepare a socket to local host 8080, to which we will send data
+            self.plot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.plot_socket.connect(('localhost', 9988))
+
     def recv_audio_chunk(self, aud_chunk: bytes, is_human: bool):
         self.buffer_lock.acquire(blocking=True)
         if is_human:
@@ -105,7 +115,7 @@ class VAPWrapper:
         combined_stereo_waveform = torch.stack((human_waveform, robot_waveform), dim=0)
         combined_stereo_waveform = combined_stereo_waveform.unsqueeze(0).to(self.device)
         res = self.model.probs(combined_stereo_waveform)
-        return res
+        return human_waveform, robot_waveform, res
 
 
     def main_thread(self):
@@ -138,17 +148,30 @@ class VAPWrapper:
                 #Commit the two parties audio bytes to the VAP model for processing
                 if(self.debug_time):
                     t1 = time.time()
-                self.logger.info(f'Triggering VAP model with {len(human_bytes_to_commit)} bytes of human audio and {len(robot_bytes_to_commit)} bytes of robot audio')
-                res = self.invoke_vap_model(human_bytes_to_commit, robot_bytes_to_commit)
+                self.logger.debug(f'Triggering VAP model with {len(human_bytes_to_commit)} bytes of human audio and {len(robot_bytes_to_commit)} bytes of robot audio')
+                human_waveform, robot_waveform, res = self.invoke_vap_model(human_bytes_to_commit, robot_bytes_to_commit)
                 res = batch_to_device(res, "cpu")
+                next_speaker_prob = res["p_now"][0, -1, 0].cpu()
                 if(self.debug_time):
                     t2 = time.time()
-                    self.logger.info(f'VAP model returned in {t2-t1:1.3f}. The probability for the next speaker to be human is {res["p_now"][0, -1, 0].cpu()}')
+                    self.logger.debug(f'VAP model returned in {t2-t1:1.3f}. The probability for the next speaker to be human is {next_speaker_prob}')
                 else:
-                    self.logger.info(f'VAP model returned. The probability for the next speaker to be human is {res["p_now"][0, -1, 0].cpu()}')
+                    self.logger.debug(f'VAP model returned. The probability for the next speaker to be human is {next_speaker_prob}')
 
+                # self.report_handle()
+
+                if(self.plot):
+                    #Send the float value to the socket
+                    self.plot_socket.sendall(f'{next_speaker_prob}\n'.encode('utf-8'))
+
+    def set_plot_handle(self, plot_handle):
+        self.visualize_content_update_handle = plot_handle
 
     def start(self):
         self.logger.info("Starting VAP model thread")
+
         self.vap_thread = threading.Thread(target=self.main_thread)
         self.vap_thread.start()
+
+
+
