@@ -3,7 +3,7 @@ from os.path import basename
 import matplotlib.pyplot as plt
 import torch
 import torchaudio
-
+import time
 
 from vap.model import VapGPT, VapConfig, load_older_state_dict
 from vap.audio import load_waveform
@@ -61,6 +61,8 @@ def step_extraction(
     n_folds = int((n_samples - chunk_samples) / step_samples + 1.0)
     total = (n_folds - 1) * step_samples + chunk_samples
 
+
+    t1 = time.time()
     # First chunk
     # Use all extracted data. Does not overlap with anything prior.
     out = model.probs(folds[0].to(device))
@@ -72,6 +74,9 @@ def step_extraction(
     #   "p_future": p_future,
     #   "H": H,
     # }
+    t2 = time.time()
+    print("Processing time for a chunk: ", t2 - t1)
+
 
     if pbar:
         from tqdm import tqdm
@@ -82,6 +87,9 @@ def step_extraction(
     # Iterate over all other folds
     # and add simply the new processed step
     for w in pbar:
+        
+        t1 = time.time()
+
         o = model.probs(w.to(device))
         out["vad"] = torch.cat([out["vad"], o["vad"][:, -step_frames:]], dim=1)
         out["p_now"] = torch.cat([out["p_now"], o["p_now"][:, -step_frames:]], dim=1)
@@ -91,6 +99,9 @@ def step_extraction(
         out["probs"] = torch.cat([out["probs"], o["probs"][:, -step_frames:]], dim=1)
         out["H"] = torch.cat([out["H"], o["H"][:, -step_frames:]], dim=1)
         # out["p_zero_shot"] = torch.cat([out["p_zero_shot"], o["p_zero_shot"][:, -step_frames:]], dim=1)
+
+        t2 = time.time()
+        print("Processing time for a chunk: ", t2 - t1)
 
     processed_frames = out["p_now"].shape[1]
 
@@ -216,6 +227,7 @@ if __name__ == "__main__":
     ###########################################################
     waveform, _ = load_waveform(args.audio, sample_rate=model.sample_rate)
     duration = round(waveform.shape[-1] / model.sample_rate)
+    # The current code assume dual-channel input, if a mono-channel input is provided, it simply treat it as utterances from ONE speaker, and assume the other party is quiet all along
     if waveform.shape[0] == 1:
         waveform = torch.cat((waveform, torch.zeros_like(waveform)))
     waveform = waveform.unsqueeze(0)
@@ -231,14 +243,25 @@ if __name__ == "__main__":
     ###########################################################
     # Model Forward
     ###########################################################
+
+    #Forse chunking
+    args.chunk = True
+    
     if args.chunk:
         # raise NotImplementedError("step extraction not implemented")
-        out = step_extraction(waveform, model, device)
+        out = step_extraction(
+                waveform, 
+                model, 
+                device,
+                context_time=5,
+                step_time=0.1,
+                pbar=False)
     else:
         if torch.cuda.is_available():
             waveform = waveform.to("cuda")
         out = model.probs(waveform)
         out = batch_to_device(out, "cpu")  # to cpu for plot/save
+
 
     ###########################################################
     # Print shapes
@@ -267,7 +290,7 @@ if __name__ == "__main__":
     if args.plot:
         print(out.keys())
         vad = out["vad"][0].cpu()
-        p_ns = out["p_now"][0, :, 0].cpu()
+        p_ns = out["p_now"][0, :, 0].cpu()#Next speaker probability
         fig, ax = plot_stereo(
             waveform[0].cpu(), p_ns, vad, plot=False, figsize=(100, 6)
         )
