@@ -21,7 +21,6 @@ from utils.audio_helpers import s16le_audio_bytes_to_tensor, tf_resample_audio
 import collections
 import socket
 
-
 # everything_deterministic()
 # torch.manual_seed(0)
 
@@ -90,7 +89,7 @@ class VAPWrapper:
         if(self.plot):
             #Prepare a socket to local host 8080, to which we will send data
             self.plot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.plot_socket.connect(('localhost', 9988))
+            self.plot_socket.connect(('localhost', self.audio_config['vap_model']['plotting_port']))
 
     def recv_audio_chunk(self, aud_chunk: bytes, is_human: bool):
         self.buffer_lock.acquire(blocking=True)
@@ -151,18 +150,20 @@ class VAPWrapper:
                 self.logger.debug(f'Triggering VAP model with {len(human_bytes_to_commit)} bytes of human audio and {len(robot_bytes_to_commit)} bytes of robot audio')
                 human_waveform, robot_waveform, res = self.invoke_vap_model(human_bytes_to_commit, robot_bytes_to_commit)
                 res = batch_to_device(res, "cpu")
-                next_speaker_prob = res["p_now"][0, -1, 0].cpu()
+                vad_prob_now = res["vad"][0, -1, 0].cpu()
+                next_speaker_prob_now = res["p_now"][0, -1, 0].cpu()
+                next_speaker_prob_future = res["p_future"][0, -1, 0].cpu()
                 if(self.debug_time):
                     t2 = time.time()
-                    self.logger.debug(f'VAP model returned in {t2-t1:1.3f}. The probability for the next speaker to be human is {next_speaker_prob}')
+                    self.logger.debug(f'VAP model returned in {t2-t1:1.3f}. P_now: {next_speaker_prob_now} P_future: {next_speaker_prob_future}')
                 else:
-                    self.logger.debug(f'VAP model returned. The probability for the next speaker to be human is {next_speaker_prob}')
+                    self.logger.debug(f'VAP model returned. P_now: {next_speaker_prob_now} P_future: {next_speaker_prob_future}')
 
-                # self.report_handle()
+                # self.report_handle((vad_prob_now,next_speaker_prob_now,next_speaker_prob_future))
 
                 if(self.plot):
                     #Send the float value to the socket
-                    self.plot_socket.sendall(f'{next_speaker_prob}\n'.encode('utf-8'))
+                    self.plot_socket.sendall(f'{vad_prob_now:.3f},{next_speaker_prob_now:.3f},{next_speaker_prob_future:.3f};'.encode('utf-8'))
 
     def set_plot_handle(self, plot_handle):
         self.visualize_content_update_handle = plot_handle

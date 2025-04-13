@@ -143,3 +143,4 @@ dmypy.json
 *.json
 *.png
 *.wav
+*.csv
