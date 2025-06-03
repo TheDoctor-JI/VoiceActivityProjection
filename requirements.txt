@@ -12,6 +12,15 @@ praat-parselmouth
 # https://github.com/ErikEkstedt/datasets_turntaking
 datasets
 
+matplotlib
+scipy
+soundfile
+
+torchvision
+torchaudio
+torch
+numpy
+
 # Our Dependencies
 # must download and install via
 # 'pip install -r requirements.txt'

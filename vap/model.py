@@ -192,7 +192,7 @@ class VapGPT(nn.Module):
         # Calculate entropy over each projection-window prediction (i.e. over
         # frames/time) If we have C=256 possible states the maximum bit entropy
         # is 8 (2^8 = 256) this means that the model have a one in 256 chance
-        # to randomly be right. The model can't do better than to uniformly
+        # to randomly be right. If the model can't do better than to uniformly
         # guess each state, it has learned (less than) nothing. We want the
         # model to have low entropy over the course of a dialog, "thinks it
         # understands how the dialog is going", it's a measure of how close the
