@@ -53,6 +53,7 @@ class VAPParams:
     def __init__(self, sid, socketio):
         try:
             self.sid = sid
+            self.socketio = socketio
 
             ## Config for dialog state prediction
             self.vap_configs = VAPParams.VAP_CONFIGS
@@ -66,7 +67,7 @@ class VAPParams:
             self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK = get_va_states_by_speaker_bin_mask(
                 vap_wrapper=self.vap_wrapper,
                 speaker_idx =VAPParams.USER_SPK_ID,
-                user_bin_mask=VAPParams.USER_BIN_MASK,
+                bin_mask=VAPParams.USER_BIN_MASK,
             )
 
             # Control flags
@@ -235,9 +236,15 @@ class VAPParams:
 
         self.buffer_lock.acquire(blocking=True)
 
-        buffer_to_concat = self.speaker_A_step_buffer if is_spk_A else self.speaker_B_step_buffer
 
-        buffer_to_concat = torch.cat([buffer_to_concat, aud_chunk], dim=0)
+        if is_spk_A:
+
+            self.speaker_A_step_buffer = torch.cat([self.speaker_A_step_buffer, aud_chunk], dim=0)
+
+        else:
+
+            self.speaker_B_step_buffer = torch.cat([self.speaker_B_step_buffer, aud_chunk], dim=0)
+
         
         self.buffer_lock.release()
 
@@ -255,11 +262,11 @@ class VAPParams:
                     self.buffer_lock.acquire(blocking=True)
 
                     ## Consume one step worth of audio from the step buffers
-                    spk_A_tensor_step = self.speaker_A_step_buffer[:self.step_trigger_sample_cnt]
-                    self.speaker_A_step_buffer = self.speaker_A_step_buffer[self.step_trigger_sample_cnt:]
+                    spk_A_tensor_step = self.speaker_A_step_buffer[:self.vap_wrapper.step_trigger_sample_cnt]
+                    self.speaker_A_step_buffer = self.speaker_A_step_buffer[self.vap_wrapper.step_trigger_sample_cnt:]
 
-                    spk_B_tensor_step = self.speaker_B_step_buffer[:self.step_trigger_sample_cnt]
-                    self.speaker_B_step_buffer = self.speaker_B_step_buffer[self.step_trigger_sample_cnt:]
+                    spk_B_tensor_step = self.speaker_B_step_buffer[:self.vap_wrapper.step_trigger_sample_cnt]
+                    self.speaker_B_step_buffer = self.speaker_B_step_buffer[self.vap_wrapper.step_trigger_sample_cnt:]
 
                     self.buffer_lock.release()
                     
@@ -271,12 +278,12 @@ class VAPParams:
 
                     ## Update the context buffer once it reaches the context size -- we have a sliding window of context
                     ## This means we dump one step worth of audio from the head of the context buffer and add the new step chunk to the tail of the context buffer
-                    if len(spkA_tensor_to_commit) > self.context_buffer_sample_cnt:
+                    if len(spkA_tensor_to_commit) > self.vap_wrapper.context_buffer_sample_cnt:
                         self.speaker_A_context_buffer = torch.cat([
                             self.speaker_A_context_buffer[len(spk_A_tensor_step):], 
                             spk_A_tensor_step
                         ], dim=0)
-                    if len(spkB_tensor_to_commit) > self.context_buffer_sample_cnt:
+                    if len(spkB_tensor_to_commit) > self.vap_wrapper.context_buffer_sample_cnt:
                         self.speaker_B_context_buffer = torch.cat([
                             self.speaker_B_context_buffer[len(spk_B_tensor_step):], 
                             spk_B_tensor_step
@@ -290,7 +297,7 @@ class VAPParams:
                     )
 
                     ## Emit the VAD state
-                    self.emit_vad_state(vap_result)
+                    self.emit_vap_state(vap_result)
 
                 else:##Not enough new audio data to process, skip this step
                     continue

@@ -60,7 +60,10 @@ def get_va_states_by_speaker_bin_mask(vap_wrapper, speaker_idx=0, bin_mask=None)
                 full_pattern = torch.tensor([other_pattern + target_pattern], dtype=torch.float32)
             
             # Convert to state index via the code book
-            state_idx = codebook.encode(full_pattern.view(1, 2, 4))
+            flattened_pattern = full_pattern.view(1, 2, 4)
+            # Move to the correct device if needed
+            flattened_pattern = flattened_pattern.to(vap_wrapper.device)
+            state_idx = codebook.encode(flattened_pattern)
             valid_states.append(state_idx.item())
     
     # Valid states to sum over
