@@ -96,6 +96,7 @@ class VAPWrapper:
 
         ## Interpret the result
         res = batch_to_device(res, "cpu")
+        full_probs = res["probs"][0, -1].cpu()  # Shape: [256]
         vad_prob_now = res["vad"][0, -1, 0].cpu()
         next_speaker_prob_now = res["p_now"][0, -1, 0].cpu()
         next_speaker_prob_future = res["p_future"][0, -1, 0].cpu()
@@ -112,7 +113,8 @@ class VAPWrapper:
         vap_result = {
             'vad_prob_now': vad_prob_now,
             'next_speaker_prob_now': next_speaker_prob_now,
-            'next_speaker_prob_future': next_speaker_prob_future
+            'next_speaker_prob_future': next_speaker_prob_future,
+            'full_probs': full_probs,
         }
 
         return vap_result

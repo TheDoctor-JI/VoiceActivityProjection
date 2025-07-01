@@ -64,6 +64,7 @@ class ProjectionWindow:
         start = 0
         v_bins = []
         for b in self.bin_frames:
+            ## Computing for both speakers. Speaker A's label (channel 0) comes first, then Speaker B's label (channel 1)
             end = start + b
             m = projection_window[..., start:end].sum(dim=-1) / b
             m = (m >= self.threshold_ratio).float()
@@ -127,7 +128,7 @@ class Codebook(nn.Module):
 
         # compare with codebook and get closest idx
         shape = x.shape
-        flatten = rearrange(x, "... c bpp -> (...) (c bpp)", c=2, bpp=self.n_bins)
+        flatten = rearrange(x, "... c bpp -> (...) (c bpp)", c=2, bpp=self.n_bins) ## Flatten the stacked bin labels to a 1x8 vector: spk A bin 0-3 followed by spk B bin 0-3
         embed = self.emb.weight.T
         dist = -(
             flatten.pow(2).sum(1, keepdim=True)

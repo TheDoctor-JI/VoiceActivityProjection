@@ -26,8 +26,9 @@ from web.queue import PCMQueue, ProcPCMQueue, ThreadSafeQueue
 import numpy as np
 # everything_deterministic()
 # torch.manual_seed(0)
-from  vap_pool import VAPPooledObject, VAPObjectPool
+from vap_pool import VAPPooledObject, VAPObjectPool
 from VAPWrapper import VAPWrapper
+from vap_helper import get_va_states_by_speaker_bin_mask
 
 def get_args():
 
@@ -46,6 +47,8 @@ class VAPParams:
     VAP_CONFIGS = get_args()
     VAP_POOL = VAPObjectPool(configs=VAP_CONFIGS)
     EXPECTED_ENCODING = 's16le'  # Expected audio encoding
+    USER_SPK_ID = 0 # We assume the user is always speaker A (id 0 in vap), and the system is speaker B
+    USER_BIN_MASK = VAP_CONFIGS['interested_user_bin_pattern']  # User's bin mask
 
     def __init__(self, sid, socketio):
         try:
@@ -60,6 +63,11 @@ class VAPParams:
             if self.vap_wrapper is None:
                 raise Exception("Failed to get VAP instance from pool")
 
+            self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK = get_va_states_by_speaker_bin_mask(
+                vap_wrapper=self.vap_wrapper,
+                speaker_idx =VAPParams.USER_SPK_ID,
+                user_bin_mask=VAPParams.USER_BIN_MASK,
+            )
 
             # Control flags
             self.stop_all_threads = False
@@ -276,7 +284,10 @@ class VAPParams:
 
 
                     ## Run inference on the VAP model with the two parties' audio chunks
-                    vap_result = self.vap_wrapper.trigger_one_processing_step()
+                    vap_result = self.vap_wrapper.trigger_one_processing_step(
+                        spkA_tensor_to_commit = spkA_tensor_to_commit,
+                        spkB_tensor_to_commit = spkB_tensor_to_commit
+                    )
 
                     ## Emit the VAD state
                     self.emit_vad_state(vap_result)
@@ -289,6 +300,15 @@ class VAPParams:
             self.release()
             raise
         
-    def emit_vad_state(self, vad_state):
-        pass
+    def emit_vap_state(self, vad_state):
+        ## Marginalize the VAD state for the user based on the user's bin mask
+        user_speak_prob = vad_state['full_probs'][..., self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK].sum(dim=-1)
 
+        # Convert tensor to float for JSON serialization
+        user_speak_prob_value = float(user_speak_prob.item())
+        
+        # Emit VAP state to the GUI
+        self.socketio.emit('vap_state_update', {
+            'user_speak_prob': user_speak_prob_value,
+            'timestamp': time.time()
+        }, to=self.sid)
