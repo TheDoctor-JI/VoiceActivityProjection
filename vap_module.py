@@ -59,6 +59,8 @@ class VAPParams:
             ## Config for dialog state prediction
             self.vap_configs = VAPParams.VAP_CONFIGS
 
+            self.debug_time = self.vap_configs.get('debug_time', False)
+
             ## Acquire VAP instance from pool
             self.vap_pool = VAPParams.VAP_POOL
             self.vap_wrapper = self.vap_pool.acquire()
@@ -292,10 +294,17 @@ class VAPParams:
 
 
                     ## Run inference on the VAP model with the two parties' audio chunks
+                    if self.debug_time:
+                        print(f"Triggering VAP model: step size {len(spk_B_tensor_step)}, context size {len(spkA_tensor_to_commit) - len(spk_A_tensor_step)}")
+
+
                     vap_result = self.vap_wrapper.trigger_one_processing_step(
                         spkA_tensor_to_commit = spkA_tensor_to_commit,
                         spkB_tensor_to_commit = spkB_tensor_to_commit
                     )
+
+                    if self.debug_time:
+                        print(f"VAP inference done.")
 
                     ## Emit the VAD state
                     self.emit_vap_state(vap_result)
