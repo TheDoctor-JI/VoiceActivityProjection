@@ -49,6 +49,7 @@ class VAPParams:
     EXPECTED_ENCODING = 's16le'  # Expected audio encoding
     USER_SPK_ID = 0 # We assume the user is always speaker A (id 0 in vap), and the system is speaker B
     USER_BIN_MASK = VAP_CONFIGS['interested_user_bin_pattern']  # User's bin mask
+    SLEEP_INTERVAL = VAP_CONFIGS['thread_sleep_interval']
 
     def __init__(self, sid, socketio):
         try:
@@ -189,7 +190,7 @@ class VAPParams:
                 # print(f"Sid: {self.sid} Received raw audio chunk for '{identity}' with size: {len(audio_dat_dict['audio'])}")
 
                 ## Get the audio data from the input queue
-                time.sleep(0.005)
+                time.sleep(VAPParams.SLEEP_INTERVAL)
 
                 data_item = self.audio_data_input_queue.get()
 
@@ -252,7 +253,7 @@ class VAPParams:
         
         try:
             while not self.stop_all_threads:
-                time.sleep(0.005)
+                time.sleep(VAPParams.SLEEP_INTERVAL)
 
                 if (
                     len(self.speaker_A_step_buffer) >= self.vap_wrapper.step_trigger_sample_cnt
