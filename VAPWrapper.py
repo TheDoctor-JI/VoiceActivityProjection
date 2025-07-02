@@ -48,7 +48,7 @@ class VAPWrapper:
         self.device = device
         self.id = shortuuid.uuid()
 
-        self.logger = setup_logger(f'VAPWrapper_{self.id}')
+        self.logger = setup_logger(f'VAPWrapper_{self.id}', file_log_level="DEBUG", terminal_log_level="INFO")
 
         state_dict_path = os.path.join(model_path)
         self.logger.info(f"Loading VAP model from state dict {state_dict_path}")

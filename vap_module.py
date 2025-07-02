@@ -38,7 +38,7 @@ def get_args():
     with open(vap_config_path, 'r') as f:
         config = yaml.safe_load(f)
 
-    print("Configuration loaded:", json.dumps(config, indent=2))
+    print("VAP configuration loaded:", json.dumps(config, indent=2))
     return config
 
 
@@ -139,6 +139,7 @@ class VAPParams:
 
         except Exception as e:
             self.logger.error(f"Error starting threads: {e}")
+            self.release()
             raise
 
     def release(self):
