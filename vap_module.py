@@ -337,7 +337,7 @@ class VAPParams:
                 )
             time.sleep(0.1)
             
-        time.sleep(1)  # Give some time for the audio chunks to be processed
+        time.sleep(5)  # Give some time for the audio chunks to be processed
 
         ## Wait till the VAP model processes all the audio chunks
         while (len(self.speaker_A_step_buffer) > 0 or len(self.speaker_B_step_buffer) > 0):
