@@ -320,3 +320,30 @@ class VAPParams:
             'user_speak_prob': user_speak_prob_value,
             'timestamp': time.time()
         }, to=self.sid)
+
+    def warmup_compiled_methods(self):
+        ## Push a few audio samples to feature gating queue of both human and system
+        num_of_chunks = 5
+        for i in range(num_of_chunks):
+            for identity in ['user', 'system']:
+                self.enqueue_audio_data(
+                    identity=identity,
+                    audio_data_dict= {
+                        'audio': b'\x00' * 2 * self.vap_wrapper.step_trigger_sample_cnt,  # 2 bytes per sample for 's16le', push exactly the amount of data for one step
+                        'sr': VAPWrapper.VAP_NOMINAL_SAMPLE_RATE,
+                        'enc': VAPParams.EXPECTED_ENCODING,
+                        'time_stamp': time.time()
+                    }
+                )
+            time.sleep(0.1)
+            
+        time.sleep(1)  # Give some time for the audio chunks to be processed
+
+        ## Wait till the VAP model processes all the audio chunks
+        while (len(self.speaker_A_step_buffer) > 0 or len(self.speaker_B_step_buffer) > 0):
+            time.sleep(VAPParams.SLEEP_INTERVAL)
+
+        ## Wait a bit longer to make sure the processing of the last chunk is done
+        time.sleep(2)
+
+        print(f"VAPParams: Warmed up compiled methods for user {self.sid} with {num_of_chunks} audio chunks.")
