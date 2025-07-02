@@ -51,10 +51,12 @@ class VAPParams:
     USER_BIN_MASK = VAP_CONFIGS['interested_user_bin_pattern']  # User's bin mask
     SLEEP_INTERVAL = VAP_CONFIGS['thread_sleep_interval']
 
-    def __init__(self, sid, socketio):
+    def __init__(self, sid, socketio, parent_logger):
         try:
             self.sid = sid
             self.socketio = socketio
+
+            self.logger = parent_logger.getChild(f"DialogStateParams")
 
             ## Config for dialog state prediction
             self.vap_configs = VAPParams.VAP_CONFIGS
@@ -66,6 +68,8 @@ class VAPParams:
             self.vap_wrapper = self.vap_pool.acquire()
             if self.vap_wrapper is None:
                 raise Exception("Failed to get VAP instance from pool")
+            else:
+                self.logger.debug(f"Acquired VAP instance {self.vap_wrapper.id} from pool")
 
             self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK = get_va_states_by_speaker_bin_mask(
                 vap_wrapper=self.vap_wrapper,
@@ -85,7 +89,7 @@ class VAPParams:
 
 
         except Exception as e:
-            print(f"Error initializing VAP params: {e}")
+            self.logger.error(f"Error initializing VAP params: {e}")
             self.release()
             raise
 
@@ -113,7 +117,7 @@ class VAPParams:
 
 
         except Exception as e:
-            print(f"Error resetting context: {e}")
+            self.logger.error(f"Error resetting context: {e}")
             raise
     
     def start_all_threads(self):
@@ -134,7 +138,7 @@ class VAPParams:
             self.vap_thread.start()
 
         except Exception as e:
-            print(f"Error starting threads: {e}")
+            self.logger.error(f"Error starting threads: {e}")
             raise
 
     def release(self):
@@ -153,7 +157,7 @@ class VAPParams:
                 self.vap_pool.release(self.vap_wrapper)
 
         except Exception as e:
-            print(f"Error releasing VAP resources: {e}")
+            self.logger.error(f"Error releasing VAP resources: {e}")
 
     def enqueue_audio_data(self, identity, audio_data_dict):
         """
@@ -189,7 +193,7 @@ class VAPParams:
            
             while not self.stop_all_threads:
 
-                # print(f"Sid: {self.sid} Received raw audio chunk for '{identity}' with size: {len(audio_dat_dict['audio'])}")
+                # self.logger.debug(f"Sid: {self.sid} Received raw audio chunk for '{identity}' with size: {len(audio_dat_dict['audio'])}")
 
                 ## Get the audio data from the input queue
                 time.sleep(VAPParams.SLEEP_INTERVAL)
@@ -218,7 +222,7 @@ class VAPParams:
                             target_sample_rate=VAPParams.VAP_NOMINAL_SAMPLE_RATE
                         )
                     except Exception as e:
-                        print(f"Error resampling audio chunk: {e}")
+                        self.logger.error(f"Error resampling audio chunk: {e}")
 
 
                 ## Enqueue the audio chunk to the correct buffer for the VAP model to process
@@ -228,7 +232,7 @@ class VAPParams:
                 )
         
         except Exception as e:
-            print(f"Error initializing VAP params: {e}")
+            self.logger.error(f"Error initializing VAP params: {e}")
             self.release()
             raise
 
@@ -295,7 +299,7 @@ class VAPParams:
 
                     ## Run inference on the VAP model with the two parties' audio chunks
                     if self.debug_time:
-                        print(f"Triggering VAP model: step size {len(spk_B_tensor_step)}, context size {len(spkA_tensor_to_commit) - len(spk_A_tensor_step)}")
+                        self.logger.debug(f"Triggering VAP model: step size {len(spk_B_tensor_step)}, context size {len(spkA_tensor_to_commit) - len(spk_A_tensor_step)}")
 
 
                     vap_result = self.vap_wrapper.trigger_one_processing_step(
@@ -304,7 +308,7 @@ class VAPParams:
                     )
 
                     if self.debug_time:
-                        print(f"VAP inference done.")
+                        self.logger.debug(f"VAP inference done.")
 
                     ## Emit the VAD state
                     self.emit_vap_state(vap_result)
@@ -313,7 +317,7 @@ class VAPParams:
                     continue
         
         except Exception as e:
-            print(f"Error initializing VAP params: {e}")
+            self.logger.error(f"Error initializing VAP params: {e}")
             self.release()
             raise
         
@@ -355,4 +359,4 @@ class VAPParams:
         ## Wait a bit longer to make sure the processing of the last chunk is done
         time.sleep(2)
 
-        print(f"VAPParams: Warmed up compiled methods for user {self.sid} with {num_of_chunks} audio chunks.")
+        self.logger.info(f"Warmed up compiled methods for user {self.sid} with {num_of_chunks} audio chunks.")

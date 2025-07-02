@@ -24,6 +24,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from web.queue import PCMQueue, ProcPCMQueue, ThreadSafeQueue
 import numpy as np
+from logger.logger import setup_logger
+import shortuuid
 # everything_deterministic()
 # torch.manual_seed(0)
 
@@ -44,9 +46,12 @@ class VAPWrapper:
         Load the VAP model
         '''
         self.device = device
+        self.id = shortuuid.uuid()
+
+        self.logger = setup_logger(f'VAPWrapper_{self.id}')
 
         state_dict_path = os.path.join(model_path)
-        print(f"Loading VAP model from state dict {state_dict_path}")
+        self.logger.info(f"Loading VAP model from state dict {state_dict_path}")
 
         self.vap_conf = VapConfig(
             sample_rate=VAPWrapper.VAP_NOMINAL_SAMPLE_RATE,
@@ -91,7 +96,7 @@ class VAPWrapper:
         if(self.debug_time):
             t1 = time.time()
 
-        # print(f'Triggering VAP model with {len(spkA_tensor_to_commit)} samples of human audio and {len(spkB_tensor_to_commit)} samples of robot audio')
+        # self.logger.debug(f'Triggering VAP model with {len(spkA_tensor_to_commit)} samples of human audio and {len(spkB_tensor_to_commit)} samples of robot audio')
         _, _, res = self.__invoke_vap_model(spkA_tensor_to_commit, spkB_tensor_to_commit)
 
         ## Interpret the result
@@ -103,10 +108,10 @@ class VAPWrapper:
         if(self.debug_time):
             t2 = time.time()
 
-            # print(f'VAP model returned in {t2-t1:1.3f}. P_now: {next_speaker_prob_now} P_future: {next_speaker_prob_future}')
+            # self.logger.debug(f'VAP model returned in {t2-t1:1.3f}. P_now: {next_speaker_prob_now} P_future: {next_speaker_prob_future}')
         else:
 
-            # print(f'VAP model returned. P_now: {next_speaker_prob_now} P_future: {next_speaker_prob_future}')
+            # self.logger.debug(f'VAP model returned. P_now: {next_speaker_prob_now} P_future: {next_speaker_prob_future}')
 
             pass
 
