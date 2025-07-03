@@ -6,7 +6,7 @@ step_size_sec: 0.1
 frame_hz: 50
 device: "cuda:1"
 model_path: "/home/eeyifanshen/e2e_audio_LLM/vap_performance_evaluation/VoiceActivityProjection/example/VAP_3mmz3t0u_50Hz_ad20s_134-epoch9-val_2.56.pt"
-interested_user_bin_pattern: [0,1,1,1] ## VAP bin pattern for the user. The system as well as other bins will be marginalized out
+interested_user_bin_pattern: [0,0,1,1] ## VAP bin pattern for the user. The system as well as other bins will be marginalized out
 thread_sleep_interval: 0.005
 occupying_floor_threshold: 0.5
 user_floor_latching_sec: 0.5
