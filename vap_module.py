@@ -267,6 +267,8 @@ class VAPParams:
                     and len(self.speaker_B_step_buffer) >= self.vap_wrapper.step_trigger_sample_cnt
                 ):
 
+                    # self.logger.debug(f"Sid: {self.sid} Triggering VAP model with step size {self.vap_wrapper.step_trigger_sample_cnt}.")
+
                     self.buffer_lock.acquire(blocking=True)
 
                     ## Consume one step worth of audio from the step buffers
@@ -322,9 +324,9 @@ class VAPParams:
             self.release()
             raise
         
-    def emit_vap_state(self, vad_state):
+    def emit_vap_state(self, vap_state):
         ## Marginalize the VAD state for the user based on the user's bin mask
-        user_speak_prob = vad_state['full_probs'][..., self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK].sum(dim=-1)
+        user_speak_prob = vap_state['full_probs'][..., self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK].sum(dim=-1)
 
         # Convert tensor to float for JSON serialization
         user_speak_prob_value = float(user_speak_prob.item())
@@ -332,6 +334,7 @@ class VAPParams:
         # Emit VAP state to the GUI
         self.socketio.emit('vap_state_update', {
             'user_speak_prob': user_speak_prob_value,
+            'is_occupying_floor': user_speak_prob_value >= self.vap_configs['occupying_floor_threshold'],
             'timestamp': time.time()
         }, to=self.sid)
 
