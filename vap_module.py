@@ -51,12 +51,13 @@ class VAPParams:
     USER_BIN_MASK = VAP_CONFIGS['interested_user_bin_pattern']  # User's bin mask
     SLEEP_INTERVAL = VAP_CONFIGS['thread_sleep_interval']
 
-    def __init__(self, sid, socketio, parent_logger):
+    def __init__(self, sid, socketio, event_outlet, parent_logger):
         try:
             self.sid = sid
             self.socketio = socketio
+            self.event_outlet = event_outlet
 
-            self.logger = parent_logger.getChild(f"DialogStateParams")
+            self.logger = parent_logger.getChild(f"VAPModule")
 
             ## Config for dialog state prediction
             self.vap_configs = VAPParams.VAP_CONFIGS
@@ -79,6 +80,12 @@ class VAPParams:
 
             # Control flags
             self.stop_all_threads = False
+
+            ## Floor state machine
+            self.user_occupying_floor = False
+            self.last_user_occupying_floor_timestamp = time.time() 
+            self.latching_timeout = self.vap_configs.get('user_floor_latching_sec', 0.0)  # Default to no latching
+            self.prediction_threshold = self.vap_configs.get('occupying_floor_threshold', 0.5)  # Default threshold for occupying floor state
 
             '''
             Audio input buffer -- these are what we send to the VAP model for processing
@@ -313,8 +320,25 @@ class VAPParams:
                     if self.debug_time:
                         self.logger.debug(f"VAP inference done.")
 
+                    ## Marginalize the VAD state for the user based on the user's bin mask
+                    user_speak_prob = vap_result['full_probs'][..., self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK].sum(dim=-1)
+                    user_speak_prob_value = float(user_speak_prob.item())
+                    is_occupying_floor = user_speak_prob_value >= self.prediction_threshold
+
+                    ## Update the state machine
+                    res_timestamp = time.time()
+                    if is_occupying_floor:#Positive flag, we stays in the occupying floor state and update the timestamp
+                        self.user_occupying_floor = True
+                        self.last_user_occupying_floor_timestamp = res_timestamp
+                    else:
+                        if self.user_occupying_floor: ## Timeout occurred, drop out of the occupying floor state
+                            if res_timestamp - self.last_user_occupying_floor_timestamp >= self.vap_configs['user_floor_latching_sec']:
+                                self.user_occupying_floor = False
+                            else:## Before the timeout, we stay in the occupying floor state
+                                pass
+
                     ## Emit the VAD state
-                    self.emit_vap_state(vap_result)
+                    self.emit_vap_state(user_speak_prob_value, self.user_occupying_floor, res_timestamp)
 
                 else:##Not enough new audio data to process, skip this step
                     continue
@@ -324,19 +348,17 @@ class VAPParams:
             self.release()
             raise
         
-    def emit_vap_state(self, vap_state):
-        ## Marginalize the VAD state for the user based on the user's bin mask
-        user_speak_prob = vap_state['full_probs'][..., self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK].sum(dim=-1)
-
-        # Convert tensor to float for JSON serialization
-        user_speak_prob_value = float(user_speak_prob.item())
-        
+    def emit_vap_state(self, user_speak_prob_value, is_occupying_floor, timestamp):
         # Emit VAP state to the GUI
-        self.socketio.emit('vap_state_update', {
+        vap_event = {
             'user_speak_prob': user_speak_prob_value,
-            'is_occupying_floor': user_speak_prob_value >= self.vap_configs['occupying_floor_threshold'],
-            'timestamp': time.time()
-        }, to=self.sid)
+            'is_occupying_floor': is_occupying_floor,
+            'timestamp': timestamp
+        }
+        self.socketio.emit('vap_state_update', vap_event, to=self.sid)
+
+        ## Also emit the VAP state to the event outlet for further processing
+        self.event_outlet(vap_event)
 
     def warmup_compiled_methods(self):
         ## Push a few audio samples to feature gating queue of both human and system

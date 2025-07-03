@@ -9,3 +9,4 @@ model_path: "/home/eeyifanshen/e2e_audio_LLM/vap_performance_evaluation/VoiceAct
 interested_user_bin_pattern: [1,1,0,0] ## VAP bin pattern for the user. The system as well as other bins will be marginalized out
 thread_sleep_interval: 0.005
 occupying_floor_threshold: 0.5
+user_floor_latching_sec: 0.5
