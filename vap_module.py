@@ -385,4 +385,4 @@ class VAPParams:
         ## Wait a bit longer to make sure the processing of the last chunk is done
         time.sleep(2)
 
-        self.logger.info(f"Warmed up compiled methods for user {self.sid} with {num_of_chunks} audio chunks.")
+        self.logger.debug(f"Warmed up compiled methods for user {self.sid} with {num_of_chunks} audio chunks.")
