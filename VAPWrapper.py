@@ -48,10 +48,10 @@ class VAPWrapper:
         self.device = device
         self.id = shortuuid.uuid()
 
-        self.logger = setup_logger(f'VAPWrapper_{self.id}', file_log_level="DEBUG", terminal_log_level="INFO")
+        # self.logger = setup_logger(f'VAPWrapper_{self.id}', file_log_level="DEBUG", terminal_log_level="INFO")
 
         state_dict_path = os.path.join(model_path)
-        self.logger.info(f"Loading VAP model from state dict {state_dict_path}")
+        # self.logger.info(f"Loading VAP model from state dict {state_dict_path}")
 
         self.vap_conf = VapConfig(
             sample_rate=VAPWrapper.VAP_NOMINAL_SAMPLE_RATE,
@@ -88,6 +88,15 @@ class VAPWrapper:
         '''
         self.context_size = context_size
         self.step_size = step_size  
+
+    def set_logger(self, parent_logger = None):
+        '''
+        Set the logger for this class
+        '''
+        if parent_logger is not None:
+            self.logger = parent_logger.getChild(f"VAPWrapper")
+        else:
+            self.logger = setup_logger(f"VAPWrapper_{self.id}", file_log_level="DEBUG", terminal_log_level="INFO")
 
     def trigger_one_processing_step(self, spkA_tensor_to_commit, spkB_tensor_to_commit):
         ## This call is stateless 

@@ -29,6 +29,7 @@ import numpy as np
 from vap_pool import VAPPooledObject, VAPObjectPool
 from VAPWrapper import VAPWrapper
 from vap_helper import get_va_states_by_speaker_bin_mask
+from logger.logger import setup_logger
 
 def get_args():
 
@@ -51,13 +52,16 @@ class VAPParams:
     USER_BIN_MASK = VAP_CONFIGS['interested_user_bin_pattern']  # User's bin mask
     SLEEP_INTERVAL = VAP_CONFIGS['thread_sleep_interval']
 
-    def __init__(self, sid, socketio, event_outlet, parent_logger):
+    def __init__(self, sid, socketio, event_outlet, parent_logger=None):
         try:
             self.sid = sid
             self.socketio = socketio
             self.event_outlet = event_outlet
 
-            self.logger = parent_logger.getChild(f"VAPModule")
+            if parent_logger is not None:
+                self.logger = parent_logger.getChild(f"VAPParams")
+            else:
+                self.logger = setup_logger(f"VAPModule_{self.sid}", file_log_level="DEBUG", terminal_log_level="INFO")
 
             ## Config for dialog state prediction
             self.vap_configs = VAPParams.VAP_CONFIGS
@@ -70,6 +74,7 @@ class VAPParams:
             if self.vap_wrapper is None:
                 raise Exception("Failed to get VAP instance from pool")
             else:
+                self.vap_wrapper.set_logger(parent_logger=self.logger)  # Set the logger for the VAP wrapper
                 self.logger.debug(f"Acquired VAP instance {self.vap_wrapper.id} from pool")
 
             self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK = get_va_states_by_speaker_bin_mask(
