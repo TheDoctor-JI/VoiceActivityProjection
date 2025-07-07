@@ -30,6 +30,7 @@ from vap_pool import VAPPooledObject, VAPObjectPool
 from VAPWrapper import VAPWrapper
 from vap_helper import get_va_states_by_speaker_bin_mask
 from logger.logger import setup_logger
+from FloorState.FloorStateEvent import FloorStateDef, FloorEvent, FloorEventType
 
 def get_args():
 
@@ -87,7 +88,8 @@ class VAPParams:
             self.stop_all_threads = False
 
             ## Floor state machine
-            self.user_occupying_floor = False
+            self.last_user_floor_state = False  
+            self.current_user_floor_state = False
             self.last_user_occupying_floor_timestamp = time.time() 
             self.latching_timeout = self.vap_configs.get('user_floor_latching_sec', 0.0)  # Default to no latching
             self.prediction_threshold = self.vap_configs.get('occupying_floor_threshold', 0.5)  # Default threshold for occupying floor state
@@ -332,18 +334,19 @@ class VAPParams:
 
                     ## Update the state machine
                     res_timestamp = time.time()
-                    if is_occupying_floor:#Positive flag, we stays in the occupying floor state and update the timestamp
-                        self.user_occupying_floor = True
+                    self.last_user_floor_state = self.current_user_floor_state
+                    if is_occupying_floor:#Positive flag, we stays in / goes into the occupying floor state immediately, and update the timestamp
                         self.last_user_occupying_floor_timestamp = res_timestamp
+                        self.current_user_floor_state = True
                     else:
-                        if self.user_occupying_floor: ## Timeout occurred, drop out of the occupying floor state
-                            if res_timestamp - self.last_user_occupying_floor_timestamp >= self.vap_configs['user_floor_latching_sec']:
-                                self.user_occupying_floor = False
+                        if self.current_user_floor_state:
+                            if res_timestamp - self.last_user_occupying_floor_timestamp >= self.vap_configs['user_floor_latching_sec']:## Timeout occurred, drop out of the occupying floor state
+                                self.current_user_floor_state = False
                             else:## Before the timeout, we stay in the occupying floor state
                                 pass
 
                     ## Emit the VAD state
-                    self.emit_vap_state(user_speak_prob_value, self.user_occupying_floor, res_timestamp)
+                    self.emit_vap_state(user_speak_prob_value, self.current_user_floor_state, self.last_user_floor_state, res_timestamp)
 
                 else:##Not enough new audio data to process, skip this step
                     continue
@@ -353,17 +356,23 @@ class VAPParams:
             self.release()
             raise
         
-    def emit_vap_state(self, user_speak_prob_value, is_occupying_floor, timestamp):
+    def emit_vap_state(self, user_speak_prob_value, current_user_floor_state, last_user_floor_state, timestamp):
         # Emit VAP state to the GUI
         vap_event = {
             'user_speak_prob': user_speak_prob_value,
-            'is_occupying_floor': is_occupying_floor,
+            'is_occupying_floor': current_user_floor_state,
+            'last_time_occupying_floor': last_user_floor_state,
             'timestamp': timestamp
         }
         self.socketio.emit('vap_state_update', vap_event, to=self.sid)
 
         ## Also emit the VAP state to the event outlet for further processing
-        self.event_outlet(vap_event)
+        self.event_outlet(
+            FloorEvent(
+                event_data=vap_event,
+                event_type=FloorEventType.OCCUPYING_STATE_REPORT
+            )
+        )
 
     def warmup_compiled_methods(self):
         ## Push a few audio samples to feature gating queue of both human and system
