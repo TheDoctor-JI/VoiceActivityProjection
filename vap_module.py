@@ -63,7 +63,7 @@ class VAPParams:
             if parent_logger is not None:
                 self.logger = parent_logger.getChild(f"VAPParams")
             else:
-                self.logger = setup_logger(f"VAPModule_{self.sid}", file_log_level="DEBUG", terminal_log_level="INFO")
+                self.logger = setup_logger(f"{self.sid}_VAPModule", file_log_level="DEBUG", terminal_log_level="INFO")
 
             ## Config for dialog state prediction
             self.vap_configs = VAPParams.VAP_CONFIGS
@@ -349,9 +349,9 @@ class VAPParams:
 
                     vap_event = {
                         'user_speak_prob': user_speak_prob_value,
-                        'is_occupying_floor': current_user_floor_state,
-                        'last_time_occupying_floor': last_user_floor_state,
-                        'timestamp': timestamp
+                        'is_occupying_floor': self.current_user_floor_state,
+                        'last_time_occupying_floor': self.last_user_floor_state,
+                        'timestamp': res_timestamp
                     }
 
                     ## Emit the VAP state to the gui for visualization
