@@ -31,6 +31,7 @@ from VAPWrapper import VAPWrapper
 from vap_helper import get_va_states_by_speaker_bin_mask
 from logger.logger import setup_logger
 from FloorState.FloorStateEvent import FloorStateDef, FloorEvent, FloorEventType
+from FloorState.floor_state_emission import *
 
 def get_args():
 
@@ -327,7 +328,7 @@ class VAPParams:
                     if self.debug_time:
                         self.logger.debug(f"VAP inference done.")
 
-                    ## Marginalize the VAD state for the user based on the user's bin mask
+                    ## Marginalize the VAP state for the user based on the user's bin mask
                     user_speak_prob = vap_result['full_probs'][..., self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK].sum(dim=-1)
                     user_speak_prob_value = float(user_speak_prob.item())
                     is_occupying_floor = user_speak_prob_value >= self.prediction_threshold
@@ -345,8 +346,30 @@ class VAPParams:
                             else:## Before the timeout, we stay in the occupying floor state
                                 pass
 
-                    ## Emit the VAD state
-                    self.emit_vap_state(user_speak_prob_value, self.current_user_floor_state, self.last_user_floor_state, res_timestamp)
+
+                    vap_event = {
+                        'user_speak_prob': user_speak_prob_value,
+                        'is_occupying_floor': current_user_floor_state,
+                        'last_time_occupying_floor': last_user_floor_state,
+                        'timestamp': timestamp
+                    }
+
+                    ## Emit the VAP state to the gui for visualization
+                    emit_vap_state_update(
+                        socketio=self.socketio,
+                        sid=self.sid, 
+                        **vap_event
+                    )
+
+                    ## Also emit the VAP state to the event outlet for further processing
+                    self.event_outlet(
+                        FloorEvent(
+                            event_data=vap_event,
+                            event_type=FloorEventType.OCCUPYING_STATE_REPORT
+                        )
+                    )
+
+
 
                 else:##Not enough new audio data to process, skip this step
                     continue
@@ -355,24 +378,6 @@ class VAPParams:
             self.logger.error(f"Error initializing VAP params: {e}")
             self.release()
             raise
-        
-    def emit_vap_state(self, user_speak_prob_value, current_user_floor_state, last_user_floor_state, timestamp):
-        # Emit VAP state to the GUI
-        vap_event = {
-            'user_speak_prob': user_speak_prob_value,
-            'is_occupying_floor': current_user_floor_state,
-            'last_time_occupying_floor': last_user_floor_state,
-            'timestamp': timestamp
-        }
-        self.socketio.emit('vap_state_update', vap_event, to=self.sid)
-
-        ## Also emit the VAP state to the event outlet for further processing
-        self.event_outlet(
-            FloorEvent(
-                event_data=vap_event,
-                event_type=FloorEventType.OCCUPYING_STATE_REPORT
-            )
-        )
 
     def warmup_compiled_methods(self):
         ## Push a few audio samples to feature gating queue of both human and system
