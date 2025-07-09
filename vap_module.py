@@ -51,7 +51,8 @@ class VAPParams:
     VAP_POOL = VAPObjectPool(configs=VAP_CONFIGS)
     EXPECTED_ENCODING = 's16le'  # Expected audio encoding
     USER_SPK_ID = 0 # We assume the user is always speaker A (id 0 in vap), and the system is speaker B
-    USER_BIN_MASK = VAP_CONFIGS['interested_user_bin_pattern']  # User's bin mask
+    USER_BIN_MASK_NEAR_FUTURE = VAP_CONFIGS['interested_user_bin_pattern_near']  # User's bin mask for near future
+    USER_BIN_MASK_FAR_FUTURE = VAP_CONFIGS['interested_user_bin_pattern_far']  # User's bin mask for far future
     SLEEP_INTERVAL = VAP_CONFIGS['thread_sleep_interval']
 
     def __init__(self, sid, socketio, event_outlet, parent_logger=None):
@@ -79,10 +80,15 @@ class VAPParams:
                 self.vap_wrapper.set_logger(parent_logger=self.logger)  # Set the logger for the VAP wrapper
                 self.logger.debug(f"Acquired VAP instance {self.vap_wrapper.id} from pool")
 
-            self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK = get_va_states_by_speaker_bin_mask(
+            self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK_NEAR_FUTURE = get_va_states_by_speaker_bin_mask(
                 vap_wrapper=self.vap_wrapper,
                 speaker_idx =VAPParams.USER_SPK_ID,
-                bin_mask=VAPParams.USER_BIN_MASK,
+                bin_mask=VAPParams.USER_BIN_MASK_NEAR_FUTURE,
+            )
+            self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK_FAR_FUTURE = get_va_states_by_speaker_bin_mask(
+                vap_wrapper=self.vap_wrapper,
+                speaker_idx =VAPParams.USER_SPK_ID,
+                bin_mask=VAPParams.USER_BIN_MASK_FAR_FUTURE,
             )
 
             # Control flags
@@ -93,7 +99,8 @@ class VAPParams:
             self.current_user_floor_state = False
             self.last_user_occupying_floor_timestamp = time.time() 
             self.latching_timeout = self.vap_configs.get('user_floor_latching_sec', 0.0)  # Default to no latching
-            self.prediction_threshold = self.vap_configs.get('occupying_floor_threshold', 0.5)  # Default threshold for occupying floor state
+            self.prediction_threshold_near = self.vap_configs.get('occupying_floor_threshold_near', 0.5)  # Default threshold for occupying floor state
+            self.prediction_threshold_far = self.vap_configs.get('occupying_floor_threshold_far', 0.8)  # Default threshold for occupying floor state
 
             '''
             Audio input buffer -- these are what we send to the VAP model for processing
@@ -329,9 +336,18 @@ class VAPParams:
                         self.logger.debug(f"VAP inference done.")
 
                     ## Marginalize the VAP state for the user based on the user's bin mask
-                    user_speak_prob = vap_result['full_probs'][..., self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK].sum(dim=-1)
-                    user_speak_prob_value = float(user_speak_prob.item())
-                    is_occupying_floor = user_speak_prob_value >= self.prediction_threshold
+                    user_speak_prob_near_future = vap_result['full_probs'][..., self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK_NEAR_FUTURE].sum(dim=-1)
+                    user_speak_prob_value_near_future = float(user_speak_prob_near_future.item())
+
+                    user_speak_prob_far_future = vap_result['full_probs'][..., self.VAP_STATE_CORRESPONDING_TO_USER_BIN_MASK_FAR_FUTURE].sum(dim=-1)
+                    user_speak_prob_value_far_future = float(user_speak_prob_far_future.item())
+
+                    p_near_past_threshold = user_speak_prob_value_near_future >= self.prediction_threshold_near
+                    p_far_past_threshold = user_speak_prob_value_far_future >= self.prediction_threshold_far
+                    if self.current_user_floor_state: ## When in floor state, we use far prob for dropping out
+                        is_occupying_floor = p_far_past_threshold
+                    else: ## When not in floor state, we use near prob for entering the floor state
+                        is_occupying_floor = p_near_past_threshold
 
                     ## Update the state machine
                     res_timestamp = time.time()
@@ -348,7 +364,8 @@ class VAPParams:
 
 
                     vap_event = {
-                        'user_speak_prob': user_speak_prob_value,
+                        'user_speak_prob_near_future': user_speak_prob_value_near_future,
+                        'user_speak_prob_far_future': user_speak_prob_value_far_future,
                         'is_occupying_floor': self.current_user_floor_state,
                         'last_time_occupying_floor': self.last_user_floor_state,
                         'timestamp': res_timestamp
