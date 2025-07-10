@@ -344,9 +344,9 @@ class VAPParams:
 
                     p_near_past_threshold = user_speak_prob_value_near_future >= self.prediction_threshold_near
                     p_far_past_threshold = user_speak_prob_value_far_future >= self.prediction_threshold_far
-                    if self.current_user_floor_state: ## When in floor state, we use far prob for dropping out
-                        is_occupying_floor = p_far_past_threshold
-                    else: ## When not in floor state, we use near prob for entering the floor state
+                    if self.current_user_floor_state: ## When in floor state
+                        is_occupying_floor = p_far_past_threshold or p_near_past_threshold 
+                    else: ## When not in floor state
                         is_occupying_floor = p_near_past_threshold
 
                     ## Update the state machine
