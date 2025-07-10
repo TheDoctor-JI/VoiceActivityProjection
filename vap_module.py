@@ -344,10 +344,10 @@ class VAPParams:
 
                     p_near_past_threshold = user_speak_prob_value_near_future >= self.prediction_threshold_near
                     p_far_past_threshold = user_speak_prob_value_far_future >= self.prediction_threshold_far
-                    if self.current_user_channel_occupancy_state: ## When in channel state
+                    if self.current_user_channel_occupancy_state: ## When in occupying channel state
                         is_occupying_channel = p_far_past_threshold or p_near_past_threshold 
-                    else: ## When not in channel state
-                        is_occupying_channel = p_near_past_threshold
+                    else: ## When not in occupying channel state
+                        is_occupying_channel = p_near_past_threshold or p_far_past_threshold
 
                     ## Update the state machine
                     res_timestamp = time.time()
