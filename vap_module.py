@@ -94,13 +94,13 @@ class VAPParams:
             # Control flags
             self.stop_all_threads = False
 
-            ## Floor state machine
-            self.last_user_floor_state = False  
-            self.current_user_floor_state = False
-            self.last_user_occupying_floor_timestamp = time.time() 
+            ## Channel occupancy state machine
+            self.last_user_channel_occupancy_state = False  
+            self.current_user_channel_occupancy_state = False
+            self.last_user_occupying_channel_timestamp = time.time() 
             self.latching_timeout = self.vap_configs.get('user_floor_latching_sec', 0.0)  # Default to no latching
-            self.prediction_threshold_near = self.vap_configs.get('occupying_floor_threshold_near', 0.5)  # Default threshold for occupying floor state
-            self.prediction_threshold_far = self.vap_configs.get('occupying_floor_threshold_far', 0.8)  # Default threshold for occupying floor state
+            self.prediction_threshold_near = self.vap_configs.get('occupying_channel_threshold_near', 0.5)  # Default threshold for occupying channel state
+            self.prediction_threshold_far = self.vap_configs.get('occupying_channel_threshold_far', 0.8)  # Default threshold for occupying channel state
 
             '''
             Audio input buffer -- these are what we send to the VAP model for processing
@@ -344,30 +344,30 @@ class VAPParams:
 
                     p_near_past_threshold = user_speak_prob_value_near_future >= self.prediction_threshold_near
                     p_far_past_threshold = user_speak_prob_value_far_future >= self.prediction_threshold_far
-                    if self.current_user_floor_state: ## When in floor state
-                        is_occupying_floor = p_far_past_threshold or p_near_past_threshold 
-                    else: ## When not in floor state
-                        is_occupying_floor = p_near_past_threshold
+                    if self.current_user_channel_occupancy_state: ## When in channel state
+                        is_occupying_channel = p_far_past_threshold or p_near_past_threshold 
+                    else: ## When not in channel state
+                        is_occupying_channel = p_near_past_threshold
 
                     ## Update the state machine
                     res_timestamp = time.time()
-                    self.last_user_floor_state = self.current_user_floor_state
-                    if is_occupying_floor:#Positive flag, we stays in / goes into the occupying floor state immediately, and update the timestamp
-                        self.last_user_occupying_floor_timestamp = res_timestamp
-                        self.current_user_floor_state = True
+                    self.last_user_channel_occupancy_state = self.current_user_channel_occupancy_state
+                    if is_occupying_channel:#Positive flag, we stays in / goes into the occupying channel state immediately, and update the timestamp
+                        self.last_user_occupying_channel_timestamp = res_timestamp
+                        self.current_user_channel_occupancy_state = True
                     else:
-                        if self.current_user_floor_state:
-                            if res_timestamp - self.last_user_occupying_floor_timestamp >= self.vap_configs['user_floor_latching_sec']:## Timeout occurred, drop out of the occupying floor state
-                                self.current_user_floor_state = False
-                            else:## Before the timeout, we stay in the occupying floor state
+                        if self.current_user_channel_occupancy_state:
+                            if res_timestamp - self.last_user_occupying_channel_timestamp >= self.vap_configs['user_floor_latching_sec']:## Timeout occurred, drop out of the occupying channel state
+                                self.current_user_channel_occupancy_state = False
+                            else:## Before the timeout, we stay in the occupying channel state
                                 pass
 
 
                     vap_event = {
                         'user_speak_prob_near_future': user_speak_prob_value_near_future,
                         'user_speak_prob_far_future': user_speak_prob_value_far_future,
-                        'is_occupying_floor': self.current_user_floor_state,
-                        'last_time_occupying_floor': self.last_user_floor_state,
+                        'is_occupying_channel': self.current_user_channel_occupancy_state,
+                        'last_time_occupying_channel': self.last_user_channel_occupancy_state,
                         'timestamp': res_timestamp
                     }
 
@@ -382,7 +382,7 @@ class VAPParams:
                     self.event_outlet(
                         FloorEvent(
                             event_data=vap_event,
-                            event_type=FloorEventType.OCCUPYING_STATE_REPORT
+                            event_type=FloorEventType.CHANNEL_OCCUPATION_REPORT
                         )
                     )
 
