@@ -371,6 +371,10 @@ class VAPParams:
                         'timestamp': res_timestamp
                     }
 
+                    if self.current_user_channel_occupancy_state != self.last_user_channel_occupancy_state:
+
+                        self.logger.debug(f'User channel occupancy state changed: from {self.last_user_channel_occupancy_state} to {self.current_user_channel_occupancy_state}, timestamp: {res_timestamp}')
+
                     ## Emit the VAP state to the gui for visualization
                     emit_vap_state_update(
                         socketio=self.socketio,
