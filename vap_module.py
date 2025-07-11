@@ -35,7 +35,7 @@ from FloorState.floor_state_emission import *
 
 def get_args():
 
-    vap_config_path = '/home/eeyifanshen/e2e_audio_LLM/dialog_turntaking_new/VoiceActivityProjection/vap_configs.yaml'
+    vap_config_path = '/home/eeyifanshen/e2e_audio_LLM/SocialTaskImplementation/dialog_turntaking/VoiceActivityProjection/vap_configs.yaml'
 
     # Load config from YAML file
     with open(vap_config_path, 'r') as f:
@@ -73,7 +73,7 @@ class VAPParams:
 
             ## Acquire VAP instance from pool
             self.vap_pool = VAPParams.VAP_POOL
-            self.vap_wrapper = self.vap_pool.acquire()
+            self.vap_wrapper = self.vap_pool.acquire()##TBD: right now this is not properly released.
             if self.vap_wrapper is None:
                 raise Exception("Failed to get VAP instance from pool")
             else:
