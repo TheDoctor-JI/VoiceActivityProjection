@@ -30,7 +30,7 @@ from vap_pool import VAPPooledObject, VAPObjectPool
 from VAPWrapper import VAPWrapper
 from vap_helper import get_va_states_by_speaker_bin_mask
 from logger.logger import setup_logger
-from FloorState.FloorStateEvent import FloorStateDef, FloorEvent, FloorEventType
+from FloorState.floor_state_machine_io import FloorStateDef, FloorEvent, FloorEventType
 from FloorState.floor_state_emission import *
 
 def get_args():
