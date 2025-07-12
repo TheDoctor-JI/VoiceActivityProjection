@@ -89,6 +89,18 @@ class VAPWrapper:
         self.context_size = context_size
         self.step_size = step_size  
 
+    def reset(self):
+        '''
+        Reset the VAPWrapper state
+        '''
+        self.logger.info(f"Resetting VAPWrapper {self.id}")
+        ## TBD: is it true that the vap model we loaded itself is stateless?
+        # Reset any internal state if needed
+        # Currently, no internal state to reset
+        pass
+
+
+
     def set_logger(self, parent_logger = None):
         '''
         Set the logger for this class

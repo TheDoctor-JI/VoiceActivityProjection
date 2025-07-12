@@ -177,7 +177,8 @@ class VAPParams:
 
             # Release VAP instance back to pool
             if self.vap_wrapper:
-                self.vap_pool.release(self.vap_wrapper)
+                self.vap_wrapper.release()
+                self.vap_wrapper = None
 
         except Exception as e:
             self.logger.error(f"Error releasing VAP resources: {e}")

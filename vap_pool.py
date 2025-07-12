@@ -31,7 +31,9 @@ class VAPObjectPool:
     def acquire(self, timeout=5.0):
         """Acquire a VAP instance from the pool"""
         try:
-            return self.pool.get(timeout=timeout)
+            obj = self.pool.get(timeout=timeout)
+            obj.in_use = True  # Mark as in use
+            return obj
         except queue.Empty:
             print("Failed to acquire VAP instance: pool is empty")
             return None
@@ -53,10 +55,10 @@ class VAPPooledObject:
         self.pool = pool
         self.in_use = False
     
-    def acquire(self):
-        """Mark this object as in use"""
-        self.in_use = True
-        return self
+    # def acquire(self):
+    #     """Mark this object as in use"""
+    #     self.in_use = True
+    #     return self
     
     def release(self):
         """Release this object back to the pool"""
@@ -67,7 +69,7 @@ class VAPPooledObject:
     def reset(self):
         """Reset the VAP wrapper state for reuse"""
         # Add any state reset logic here if needed
-        pass
+        self.vap_wrapper.reset()
     
     def __getattr__(self, name):
         """Delegate attribute access to the wrapped VAP instance"""
