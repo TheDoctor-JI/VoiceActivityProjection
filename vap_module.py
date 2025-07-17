@@ -194,6 +194,8 @@ class VAPParams:
                     'time_stamp': timstamp # Timestamp for the audio chunk
                 },
         """
+
+        
         self.audio_data_input_queue.put(
             (
                 audio_data_dict,
@@ -229,13 +231,15 @@ class VAPParams:
 
                 audio_dat_dict, identity = data_item
 
+
+
                 ## Check encoding
                 if(audio_dat_dict['enc'] != 's16le'):
                     raise ValueError(f"Expected audio encoding '{VAPParams.EXPECTED_ENCODING}', but got {audio_dat_dict['enc']}")
 
                 ## Check sampling rate, do resampling if necessary
 
-                audio_chunk = np.frombuffer(bytes(audio_dat_dict['audio']), dtype=np.int16)
+                audio_chunk = np.frombuffer(audio_dat_dict['audio'], dtype=np.int16)
                 audio_chunk = audio_chunk.astype(np.float32) / 32767.0
                 audio_chunk_tensor = torch.from_numpy(audio_chunk)
                 if(audio_dat_dict['sr'] != VAPWrapper.VAP_NOMINAL_SAMPLE_RATE):
