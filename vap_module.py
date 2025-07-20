@@ -44,6 +44,7 @@ def get_args():
     print("VAP configuration loaded:", json.dumps(config, indent=2))
     return config
 
+##TBD: vap can have lags and fail to restart
 
 class VAPParams:
 
