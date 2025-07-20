@@ -12,4 +12,4 @@ interested_user_bin_pattern_near: [1,1,0,0] ## VAP bin pattern for the user. The
 occupying_channel_threshold_far: 0.9
 interested_user_bin_pattern_far: [0,0,1,1] ## VAP bin pattern for the user. The system as well as other bins will be marginalized out
 thread_sleep_interval: 0.005
-user_floor_latching_sec: 0.25
+user_floor_latching_sec: 0.3
