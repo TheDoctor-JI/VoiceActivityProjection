@@ -132,11 +132,15 @@ class VAPParams:
         """Reset the conversation context"""
         try:
 
+            self.logger.debug(f"Resetting VAP context...")
+
             # Clear the context buffers in vap
             self.clear_buffers()
 
             # Input queue
             self.audio_data_input_queue = ProcPCMQueue()
+
+            self.logger.debug(f"VAP context reset.")
 
 
         except Exception as e:
