@@ -200,7 +200,11 @@ class VAPParams:
                 },
         """
 
-        
+        # if identity == 'system':
+
+        #     self.logger.debug(f"Sid: {self.sid} Received raw audio chunk for '{identity}' with size: {len(audio_data_dict['audio'])}")
+
+
         self.audio_data_input_queue.put(
             (
                 audio_data_dict,
@@ -224,7 +228,6 @@ class VAPParams:
            
             while not self.stop_all_threads:
 
-                # self.logger.debug(f"Sid: {self.sid} Received raw audio chunk for '{identity}' with size: {len(audio_dat_dict['audio'])}")
 
                 ## Get the audio data from the input queue
                 time.sleep(VAPParams.SLEEP_INTERVAL)
