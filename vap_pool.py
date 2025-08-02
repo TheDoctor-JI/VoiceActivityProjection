@@ -42,6 +42,7 @@ class VAPObjectPool:
         """Release a VAP instance back to the pool"""
         if obj and hasattr(obj, 'reset'):
             obj.reset()  # Reset the instance state
+            obj.release()  # Release the object back to the pool
         try:
             self.pool.put(obj, block=False)
         except queue.Full:
