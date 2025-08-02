@@ -93,6 +93,8 @@ class VAPParams:
 
             # Control flags
             self.stop_all_threads = False
+            self.pause_all_threads = True
+
 
             ## Channel occupancy state machine
             self.last_user_channel_occupancy_state = False  
@@ -106,9 +108,6 @@ class VAPParams:
             Audio input buffer -- these are what we send to the VAP model for processing
             '''
             self.buffer_lock = threading.Lock()
-
-            self.clear_buffers()
-
 
         except Exception as e:
             self.logger.error(f"Error initializing VAP params: {e}")
@@ -133,14 +132,19 @@ class VAPParams:
 
             self.logger.debug(f"Resetting VAP context...")
 
+            self.pause_all_threads = True  ## Pause all threads
+
+            time.sleep(0.3) ## Sleep for roughly one iteration's processing time to ensure all remnant processings are done and can be safely reset
+
             # Clear the context buffers in vap
             self.clear_buffers()
 
             # Input queue
             self.audio_data_input_queue = ProcPCMQueue()
 
-            self.logger.debug(f"VAP context reset.")
+            self.pause_all_threads = False 
 
+            self.logger.debug(f"VAP context reset.")
 
         except Exception as e:
             self.logger.error(f"Error resetting context: {e}")
@@ -231,6 +235,9 @@ class VAPParams:
                 ## Get the audio data from the input queue
                 time.sleep(VAPParams.SLEEP_INTERVAL)
 
+                if self.pause_all_threads:
+                    continue
+
                 data_item = self.audio_data_input_queue.get()
 
                 if data_item is None:
@@ -294,7 +301,11 @@ class VAPParams:
         
         try:
             while not self.stop_all_threads:
+
                 time.sleep(VAPParams.SLEEP_INTERVAL)
+
+                if self.pause_all_threads:
+                    continue
 
                 if (
                     len(self.speaker_A_step_buffer) >= self.vap_wrapper.step_trigger_sample_cnt
