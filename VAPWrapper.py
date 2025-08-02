@@ -94,10 +94,6 @@ class VAPWrapper:
         Reset the VAPWrapper state
         '''
         self.logger.info(f"Resetting VAPWrapper {self.id}")
-        ## TBD: is it true that the vap model we loaded itself is stateless?
-        # Reset any internal state if needed
-        # Currently, no internal state to reset
-        pass
 
 
 
