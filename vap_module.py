@@ -73,7 +73,7 @@ class VAPParams:
 
             ## Acquire VAP instance from pool
             self.vap_pool = VAPParams.VAP_POOL
-            self.vap_wrapper = self.vap_pool.acquire()##TBD: right now this is not properly released.
+            self.vap_wrapper = self.vap_pool.acquire()
             if self.vap_wrapper is None:
                 raise Exception("Failed to get VAP instance from pool")
             else:
