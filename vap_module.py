@@ -426,10 +426,11 @@ class VAPParams:
 
     def warmup_compiled_methods(self):
         ## Push a few audio samples to feature gating queue of both human and system
-        self.logger.debug(f"Warming up compiled methods for user {self.sid}...")
+        self.logger.info(f"Warming up VAP compiled methods for user {self.sid}...")
         num_of_chunks = 5
         for i in range(num_of_chunks):
             for identity in ['user', 'system']:
+                self.logger.info(f"Fabricating audio chunk {i + 1}/{num_of_chunks} for {identity}.")
                 self.enqueue_audio_data(
                     identity=identity,
                     audio_data_dict= {
@@ -441,7 +442,7 @@ class VAPParams:
                 )
             time.sleep(0.1)
         
-        self.logger.debug(f"Fabricated {num_of_chunks} audio chunks for user {self.sid} to warm up compiled methods.")
+        self.logger.info(f"Fabricated audio data for vap warm up, pending processing...")
 
         
         time.sleep(2)  ##Give some time for the audio chunks to be processed
@@ -453,4 +454,4 @@ class VAPParams:
         ## Wait a bit longer to make sure the processing of the last chunk is done
         time.sleep(2)
 
-        self.logger.debug(f"Warmed up compiled methods for user {self.sid} with {num_of_chunks} audio chunks.")
+        self.logger.info(f"VAP: warm up complete.")
