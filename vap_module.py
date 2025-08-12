@@ -430,7 +430,7 @@ class VAPParams:
         num_of_chunks = 5
         for i in range(num_of_chunks):
             for identity in ['user', 'system']:
-                self.logger.info(f"Fabricating audio chunk {i + 1}/{num_of_chunks} for {identity}.")
+                self.logger.debug(f"Fabricating audio chunk {i + 1}/{num_of_chunks} for {identity}.")
                 self.enqueue_audio_data(
                     identity=identity,
                     audio_data_dict= {
@@ -442,7 +442,7 @@ class VAPParams:
                 )
             time.sleep(0.1)
         
-        self.logger.info(f"Fabricated audio data for vap warm up, pending processing...")
+        self.logger.debug(f"Fabricated audio data for vap warm up, pending processing...")
 
         
         time.sleep(2)  ##Give some time for the audio chunks to be processed
