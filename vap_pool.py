@@ -2,7 +2,7 @@ import threading
 import queue
 import time
 from VAPWrapper import VAPWrapper
-
+import os, sys
 class VAPObjectPool:
     """Thread-safe object pool for VAP instances"""
     
@@ -16,7 +16,7 @@ class VAPObjectPool:
         # Pre-create VAP instances
         for i in range(self.size):
             vap_instance = VAPWrapper(
-                model_path=configs['model_path'],
+                model_path= os.path.join(os.path.dirname(__file__),configs['model_path']),
                 context_size=configs['context_size_sec'],
                 step_size=configs['step_size_sec'],
                 frame_hz=configs['frame_hz'],

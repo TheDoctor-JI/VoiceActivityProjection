@@ -35,7 +35,7 @@ from FloorState.floor_state_emission import *
 
 def get_args():
 
-    vap_config_path = '/home/eeyifanshen/e2e_audio_LLM/SocialTaskImplementation/floor_coordinator/VoiceActivityProjection/vap_configs.yaml'
+    vap_config_path = f'{os.path.dirname(__file__)}/vap_configs.yaml'
 
     # Load config from YAML file
     with open(vap_config_path, 'r') as f:
