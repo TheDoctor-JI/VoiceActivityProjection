@@ -55,11 +55,12 @@ class VAPParams:
     USER_BIN_MASK_FAR_FUTURE = VAP_CONFIGS['interested_user_bin_pattern_far']  # User's bin mask for far future
     SLEEP_INTERVAL = VAP_CONFIGS['thread_sleep_interval']
 
-    def __init__(self, sid, socketio, event_outlet, parent_logger=None):
+    def __init__(self, sid, socketio, event_outlet, environment_audio_config: dict, parent_logger=None):
         try:
             self.sid = sid
             self.socketio = socketio
             self.event_outlet = event_outlet
+            self.environment_audio_config = environment_audio_config
 
             if parent_logger is not None:
                 self.logger = parent_logger.getChild(f"VAPParams")
