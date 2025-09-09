@@ -113,7 +113,7 @@ class VAPParams:
         except Exception as e:
             self.logger.error(f"Error initializing VAP params: {e}")
             self.release()
-            raise
+            raise e
 
     def clear_buffers(self):
 
@@ -149,7 +149,7 @@ class VAPParams:
 
         except Exception as e:
             self.logger.error(f"Error resetting context: {e}")
-            raise
+            raise e
     
     def start_all_threads(self):
         """Start all necessary threads for dialog state prediction"""
@@ -171,7 +171,7 @@ class VAPParams:
         except Exception as e:
             self.logger.error(f"Error starting threads: {e}")
             self.release()
-            raise
+            raise e
 
     def release(self):
         """Release resources"""
@@ -277,7 +277,7 @@ class VAPParams:
         except Exception as e:
             self.logger.error(f"Error initializing VAP params: {e}")
             self.release()
-            raise
+            raise e
 
     def send_to_step_buffer(self, aud_chunk: torch.tensor, is_spk_A: bool):
         '''
@@ -423,7 +423,7 @@ class VAPParams:
         except Exception as e:
             self.logger.error(f"Error initializing VAP params: {e}")
             self.release()
-            raise
+            raise e
 
     def warmup_compiled_methods(self):
         ## Push a few audio samples to feature gating queue of both human and system
