@@ -44,6 +44,7 @@ def get_args():
     print("VAP configuration loaded:", json.dumps(config, indent=2))
     return config
 
+DEBUG_LOGGING = False
 
 class VAPParams:
 
@@ -347,7 +348,7 @@ class VAPParams:
 
 
                     ## Run inference on the VAP model with the two parties' audio chunks
-                    if self.debug_time:
+                    if DEBUG_LOGGING and self.debug_time:
                         self.logger.debug(f"Triggering VAP model: step size {len(spk_B_tensor_step)}, context size {len(spkA_tensor_to_commit) - len(spk_A_tensor_step)}")
 
 
@@ -356,7 +357,7 @@ class VAPParams:
                         spkB_tensor_to_commit = spkB_tensor_to_commit
                     )
 
-                    if self.debug_time:
+                    if DEBUG_LOGGING and self.debug_time:
                         self.logger.debug(f"VAP inference done.")
 
                     ## Marginalize the VAP state for the user based on the user's bin mask
@@ -431,7 +432,8 @@ class VAPParams:
         num_of_chunks = 5
         for i in range(num_of_chunks):
             for identity in ['user', 'system']:
-                self.logger.debug(f"Fabricating audio chunk {i + 1}/{num_of_chunks} for {identity}.")
+                if DEBUG_LOGGING:
+                    self.logger.debug(f"Fabricating audio chunk {i + 1}/{num_of_chunks} for {identity}.")
                 self.enqueue_audio_data(
                     identity=identity,
                     audio_data_dict= {
