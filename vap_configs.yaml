@@ -1,4 +1,4 @@
-debug_time: True
+debug_time: False
 
 max_instance_cnt: 1
 context_size_sec: 10
