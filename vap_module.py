@@ -44,6 +44,7 @@ def get_args():
     print("VAP configuration loaded:", json.dumps(config, indent=2))
     return config
 
+CONNECT_TO_FLOOR_COORDINATOR = False
 DEBUG_LOGGING = False
 
 class VAPParams:
@@ -401,20 +402,21 @@ class VAPParams:
 
                         self.logger.debug(f'User channel occupancy state changed: from {self.last_user_channel_occupancy_state} to {self.current_user_channel_occupancy_state}, timestamp: {res_timestamp}')
 
-                    ## Emit the VAP state to the gui for visualization
-                    emit_vap_state_update(
-                        socketio=self.socketio,
-                        sid=self.sid, 
-                        **vap_event
-                    )
-
-                    ## Also emit the VAP state to the event outlet for further processing
-                    self.event_outlet(
-                        FloorEvent(
-                            event_data=vap_event,
-                            event_type=FloorEventType.CHANNEL_OCCUPATION_REPORT
+                    if CONNECT_TO_FLOOR_COORDINATOR:
+                        ## Emit the VAP state to the gui for visualization
+                        emit_vap_state_update(
+                            socketio=self.socketio,
+                            sid=self.sid, 
+                            **vap_event
                         )
-                    )
+
+                        ## Also emit the VAP state to the event outlet for further processing
+                        self.event_outlet(
+                            FloorEvent(
+                                event_data=vap_event,
+                                event_type=FloorEventType.CHANNEL_OCCUPATION_REPORT
+                            )
+                        )
 
 
 
